@@ -1,5 +1,5 @@
---- b/sources/shiboken2/tests/dumpcodemodel/main.cpp
-+++ a/sources/shiboken2/tests/dumpcodemodel/main.cpp
+--- a/sources/shiboken2/tests/dumpcodemodel/main.cpp
++++ b/sources/shiboken2/tests/dumpcodemodel/main.cpp
 @@ -88,3 +88,27 @@
      for (const auto &en : nsp->enums())
          formatXmlEnum(writer, en);
@@ -28,3 +28,16 @@
 +               }
 +    }
  }
+@@ -128,6 +127,11 @@
+     writer.writeStartElement(isValueType ? QStringLiteral("value-type")
+                                          : QStringLiteral("object-type"));
+     writer.writeAttribute(nameAttribute(), klass->name());
++    QStringList baseClasses;
++    for(const auto &k : klass->baseClasses()) {
++       baseClasses.append(k.name);
++       };
++    writer.writeAttribute(QStringLiteral("baseClasses"), baseClasses.join(QStringLiteral(", ")));
+     formatXmlScopeMembers(writer, klass);
+     writer.writeEndElement();
+ }
+
