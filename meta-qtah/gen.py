@@ -13,7 +13,10 @@ import sys
 import re
 from collections import namedtuple
 from enum import Enum
-from textwrap import dedent
+import textwrap
+
+import os
+mypath = os.path.dirname(os.path.abspath(__file__))
 
 ##method types
 Constructor = namedtuple("Constructor", ["signature", "ret", "is_const"])
@@ -78,7 +81,15 @@ class App:
     return classInclude, className
 
   def getXML(classInclude):
-    xml = subprocess.check_output("./extractor.sh %s" % classInclude, shell=True, stderr=subprocess.DEVNULL)
+    try:
+      cmd = [mypath + "/extractor.sh", classInclude]
+      hdl = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE )
+      xml, err = hdl.communicate()
+      if hdl.returncode != 0:
+        raise subprocess.CalledProcessError(hdl.returncode, cmd, err)
+    except subprocess.CalledProcessError as e:
+      print("subprocess error: \n" + textwrap.indent(e.output.decode("ascii"), "    "), file=sys.stderr)
+      raise e
     tree = ET.fromstring(xml)
     return tree
 
@@ -88,7 +99,7 @@ class App:
     try:
       assert(len(results) == 1)
     except AssertionError as e:
-      print(results)
+      print(results, file=sys.stderr)
       raise e
     result = results[0]
     return result
@@ -289,7 +300,7 @@ class Rules:
   def genModule(classInfo, features, methods):
     featurestrs = lambda x: [y.value for y in x] #TODO
     #TODO split extraimports
-    template = dedent("""\
+    template = textwrap.dedent("""\
       module Graphics.UI.Qtah.Generator.Interface.{hsClassModule}.{className} (
         aModule,
         {hsClassName}
@@ -504,7 +515,7 @@ class FilterRules:
 #TODO HAXXX
 class ModLUT1:
   basepath = ("Graphics", "UI", "Qtah", "Generator", "Interface")
-  modlist = [x.strip().replace("./","").split("/") for x in open("./modlist.txt", "r").readlines()]
+  modlist = [x.strip().replace("./","").split("/") for x in open("%s/modlist.txt" % mypath, "r").readlines()]
 class ModLUT2:
   gen = lambda x,y : Import(path=ModLUT1.basepath + (x.lstrip("Qt"), y), imports=("c_%s" % y, ))
 class ModLUT:
@@ -530,6 +541,7 @@ if __name__ == "__main__":
   tree = App.getXML(classInclude)
   classElem = App.getClassElem(tree)
   #TODO: logging
-  App.dumpClassXML(classElem)
+  #App.dumpClassXML(classElem)
   #Rules(className).
   #print(result)
+  print(callGen(classElem))
