@@ -57,6 +57,8 @@ library
       base >=4 && <5
     , process >=1.2 && <1.7
     , qtah-generator >=0.6 && <0.7
+  build-tool-depends:
+    qtah-generator:qtah-generator
   ghc-options: -W -fwarn-incomplete-patterns -fwarn-unused-do-bind
 
 custom-setup

@@ -530,6 +530,9 @@ library
     , hoppy-runtime >=0.7 && <0.8
     , qtah-cpp >=0.6 && <0.7
     , qtah-generator >=0.6 && <0.7
+  build-tool-depends:
+    qtah-generator:qtah-generator,
+    qtbase:qtbase
   hs-source-dirs: src
   ghc-options: -W -fwarn-incomplete-patterns -fwarn-unused-do-bind
   default-language: Haskell2010
