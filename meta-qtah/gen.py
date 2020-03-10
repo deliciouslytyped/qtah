@@ -352,15 +352,13 @@ class Rules:
 
       aModule =
         AQtModule $
-        makeQtModule [ {makeQtModule_path} ]
-        [
-        qtExport {hsClassName}
-        ]
+        makeQtModule [{makeQtModule_path}]
+        [ qtExport {hsClassName} ]
 
       {hsClassName} =
-        addReqIncludes [includeStd "{className}"] $ --TODO I've no idea what this does
-        classSetEntityPrefix "" $ --TODO I've no idea what this does
-        makeClass (ident "{className}") Nothing --TODO I've no idea what this does
+        addReqIncludes [includeStd "{className}"] $
+        classSetEntityPrefix "" $
+        makeClass (ident "{className}") Nothing
         [ {superclasses} ]
         [ {methods}
         ]
