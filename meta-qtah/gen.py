@@ -7,6 +7,10 @@
 #if copy constructor exists, add Copyable
 #if exist name, setName pairs, makeProp?
 
+#Things that definitely arent handled:
+# - whether an argument is a pointer or what
+# - enums are not handled at all
+
 import xml.etree.ElementTree as ET
 import subprocess
 import sys
@@ -142,10 +146,13 @@ class Convert:
     fname = method_struct.signature.name
     features, _args, failed = Convert.argsToHoppy(method_struct.signature.args, debuginfo=method_struct) #TODO handle fail
     args = "[ %s ]" % ", ".join(_args)
+
     try:
-      features, ret = Convert.retToHoppy(method_struct.ret)
+      _features, ret = Convert.retToHoppy(method_struct.ret)
     except BadSig as e:
       failed += [ (func, method_struct, e) ]
+    features += _features
+
     if failed:
       return [], [], failed
 
@@ -163,7 +170,7 @@ class Convert:
     #TODO meh
     if variant == "constructor":
       suffix = "N".join(method_struct.signature.args)
-      fname = "new" + (("With" + suffix) if suffix else "")
+      fname = "new" + (("With" + suffix) if suffix else "") #TODO probably parse argument names from qt for this
       features, _args, failed = Convert.argsToHoppy(method_struct.signature.args, isCtor=True, debuginfo=method_struct) #TODO handle fail #TODO pass extra info for debug output
       args = "[ %s ]" % ", ".join(_args)
 
@@ -230,6 +237,7 @@ class Convert:
     for i,x in enumerate(args):
       try:
         _features, _result = Convert._argToHoppy(x, i, length, isCtor)
+        #print(_features, file=sys.stderr)
         features += _features
         result += [ _result ]
       except BadSig as e:
@@ -271,6 +279,8 @@ class Convert:
       result += _res
       failed += _fail
       features += _features
+    #import pprint
+    #pprint.pprint(features, stream=sys.stderr)
     return features, result, failed
 
   #the features for method types are returned by correlate, this chain only returns features for the signature types
@@ -535,8 +545,11 @@ class ClassModuleRules:
     #return ClassModuleRules.lut[_module][_name] #TODO
 
 class FilterRules:
-  ignoreFns = ["tr", "trUtf8", "metaObject", "qt_metacast", "qt_metacall", "trUtf8", "qt_static_metacall"] + \
-    [("void","QPixmap(char)"), ("bool","loadFromData(QByteArray,char,Qt::ImageConversionFlags)")] #qpixmap
+  ignoreFns = sum([
+    ["tr", "trUtf8", "metaObject", "qt_metacast", "qt_metacall", "d_func", "qt_static_metacall"],
+    [("void","QPixmap(char)"), ("bool","loadFromData(QByteArray,char,Qt::ImageConversionFlags)")], #qpixmap, because char #todo this probably doesnt work since i recoded it
+    ["initStyleOption"] #qpushbutton test
+    ], [])
 
 #TODO doesnt handle collisions
 #TODO HAXXX
@@ -544,7 +557,8 @@ class ModLUT1:
   basepath = ("Graphics", "UI", "Qtah", "Generator", "Interface")
   modlist = [x.strip().replace("./","").split("/") for x in open("%s/modlist.txt" % mypath, "r").readlines()]
 class ModLUT2:
-  gen = lambda x,y : Import(path=ModLUT1.basepath + (x.lstrip("Qt"), y), imports=("c_%s" % y, ))
+  def gen(x,y):
+    return Import(path=ModLUT1.basepath + (x.lstrip("Qt"), y), imports=("c_%s" % y, ))
 class ModLUT:
   modlut = {
       "c_%s" % b: ModLUT2.gen(a,b) for a,b in ModLUT1.modlist
@@ -554,11 +568,16 @@ class ModLUT:
 
 #todo consider tagging methods with features?
 def callGen(classElem):
+  failures = []
   clinf = ClassInfo(classInclude, classElem)
   __features = clinf.superclassFeatures
-  features, methods, failures = Correlate.correlate(classElem, ignores=FilterRules.ignoreFns)
-  _features, methods, failures = Convert.hoppyMethodsToStrings(methods)
+  features, methods, _failures = Correlate.correlate(classElem, ignores=FilterRules.ignoreFns)
+  failures += _failures
+  _features, methods, _failures = Convert.hoppyMethodsToStrings(methods)
+  failures += _failures
   features = mergeFeatures([features, _features, __features])
+  import pprint
+  pprint.pprint(failures, stream=sys.stderr) #TODO
   return Rules.genModule(clinf, features, methods)
 
 
