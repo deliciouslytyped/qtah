@@ -148,7 +148,13 @@ class Convert:
       failed += [ (func, method_struct, e) ]
     if failed:
       return [], [], failed
-    return features, ['%s "%s" %s %s' % (func, fname, args if args != "[  ]" else "np", ret)], failed
+
+    #TODO meh
+    result = '%s "%s" %s %s' % (func, fname, args if args != "[  ]" else "np", ret)
+    if args != "[  ]":
+      features += [ FeatureSet(spec={SpecFeature.np}, cls=set(), type=set(), extra=set()) ]
+
+    return features, [result], failed
 
   def methodToHoppy(variant, method_struct):
     #TODO: case over Normal(is.. / ??), Constructor
@@ -160,7 +166,13 @@ class Convert:
       fname = "new" + (("With" + suffix) if suffix else "")
       features, _args, failed = Convert.argsToHoppy(method_struct.signature.args, isCtor=True, debuginfo=method_struct) #TODO handle fail #TODO pass extra info for debug output
       args = "[ %s ]" % ", ".join(_args)
-      return features, ['mkCtor "%s" %s' % (fname, args if args != "[  ]" else "np")], failed
+
+      #TODO meh
+      result = 'mkCtor "%s" %s' % (fname, args if args != "[  ]" else "np")
+      if args != "[  ]":
+        features += [ FeatureSet(spec={SpecFeature.np}, cls=set(), type=set(), extra=set()) ]
+
+      return features, [result], failed
 
     elif variant == "boolisprop":
       fname = method_struct.signature.name.lstrip("is")
