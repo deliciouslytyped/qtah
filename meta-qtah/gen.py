@@ -290,31 +290,6 @@ class Rules:
     featurestrs = lambda x: [y.value for y in x] #TODO
     #TODO split extraimports
     template = dedent("""\
-      todo: visibly fudge the numbers
-      --- a/qtah-generator/qtah-generator.cabal
-      +++ b/qtah-generator/qtah-generator.cabal
-      @@ -57 +57,3 @@
-           , Graphics.UI.Qtah.Generator.Interface.Core.QAbstractAnimation
-      +    , Graphics.UI.Qtah.Generator.Interface.{hsClassModule}.{className}
-      --- a/qtah-generator/src/Graphics/UI/Qtah/Generator/Interface/{hsClassModule}.hs
-      +++ b/qtah-generator/src/Graphics/UI/Qtah/Generator/Interface/{hsClassModule}.hs
-      @@ -18,6 +18,7 @@
-       import qualified Graphics.UI.Qtah.Generator.Interface.Core.QAbstractAnimation as QAbstractAnimation
-      +import qualified Graphics.UI.Qtah.Generator.Interface.{hsClassModule}.{className} as {className}
-      @@ -122,6 +122,7 @@
-         [ [ QAbstractAnimation.aModule
-      +    , {className}.aModule
-      --- a/qtah/qtah.cabal
-      +++ b/qtah/qtah.cabal
-      @@ -30 +30,2 @@
-           , Graphics.UI.Qtah.Core.QAbstractAnimation
-      +    , Graphics.UI.Qtah.{hsClassModule}.{className}
-      @@ -275 +276,2 @@
-         other-modules:
-      +      Graphics.UI.Qtah.Generated.{hsClassModule}.{className}
-      --- a/qtah-generator/src/Graphics/UI/Qtah/Generator/Interface/{hsClassModule}/{className}.hs
-      +++ b/qtah-generator/src/Graphics/UI/Qtah/Generator/Interface/{hsClassModule}/{className}.hs
-      @@ 1,1 1,1 @@
       module Graphics.UI.Qtah.Generator.Interface.{hsClassModule}.{className} (
         aModule,
         {hsClassName}
