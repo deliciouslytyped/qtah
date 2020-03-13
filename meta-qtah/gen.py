@@ -149,9 +149,9 @@ class Convert:
 
     try:
       _features, ret = Convert.retToHoppy(method_struct.ret)
+      features += _features
     except BadSig as e:
       failed += [ (func, method_struct, e) ]
-    features += _features
 
     if failed:
       return [], [], failed

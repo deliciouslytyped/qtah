@@ -7,6 +7,12 @@ import sys
 import shutil
 import tempfile
 
+plus = False
+try:
+  plus = sys.argv[2] == "+"
+except:
+  pass
+
 classModule, className = sys.argv[1].split("/") #TOOD system path sep i guess?
 hsClassName, hsClassModule = "c_%s" % className, classModule.lstrip("Qt")
 
@@ -31,7 +37,7 @@ entries = [
     "  other-modules:",
     "      Graphics.UI.Qtah.Generated.{hsClassModule}.{className}"
     )
-  ]
+  ] if plus else []
 
 args = { "hsClassName" : hsClassName, "className" : className, "hsClassModule" : hsClassModule}
 def addOnceToFile(path, match, add):
