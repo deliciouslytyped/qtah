@@ -7,5 +7,5 @@ let
 in
 #{pkgs? _pkgs}:
   pkgs.haskell-nix.stackProject {
-    src = pkgs.haskell-nix.haskellLib.cleanGit { src = ./.; };
+    src = pkgs.haskell-nix.haskellLib.cleanGit { src = ./..; };
   }
