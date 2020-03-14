@@ -1,6 +1,7 @@
 #! /usr/bin/env nix-shell
 #! nix-shell -i python3 -p python37 python37Packages.parsy
 #TODO pinning
+#TODO generate profile which can be edited
 
 #this has no design, i just started trying to generate stuff from the inside out, starting with ctors, boolisprop, mkmethod
 
@@ -20,7 +21,6 @@ from enum import Enum
 import textwrap
 
 import os
-mypath = os.path.dirname(os.path.abspath(__file__))
 
 ##method types
 Constructor = namedtuple("Constructor", ["signature", "ret", "is_const"])
@@ -79,6 +79,13 @@ class BadSig(Exception):
 #################
 
 class App:
+  mypath = os.path.dirname(os.path.abspath(__file__))
+
+  def getVersion(): #TODO make less hacky #TODO add date
+    version = "unversioned"
+    selfsha = subprocess.check_output(["sha256sum", App.mypath + "/gen.py"]).split()[0].decode("ascii")
+    return "%s.%s" % (version, selfsha)
+
   def parseArgs():
     classInclude = sys.argv[1]
     className = classInclude.split("/")[1] #TODO system dependent path separator
@@ -86,7 +93,7 @@ class App:
 
   def getXML(classInclude):
     try:
-      cmd = [mypath + "/extractor.sh", classInclude]
+      cmd = [App.mypath + "/extractor.sh", classInclude]
       hdl = subprocess.Popen(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE )
       xml, err = hdl.communicate()
       if hdl.returncode != 0:
@@ -340,6 +347,8 @@ class Rules:
       -- You should have received a copy of the GNU Lesser General Public License
       -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+      {{- This file was generated with PyMetaQtah {pymqtversion} -}}
+
       module Graphics.UI.Qtah.Generator.Interface.{hsClassModule}.{className} (
         aModule,
         {hsClassName}
@@ -383,9 +392,13 @@ class Rules:
         specfeatures = "\n  , ".join(featurestrs(features.spec) + featurestrs(list(GlobalSpecFeature))),
         classfeatures = "\n  , ".join(featurestrs(features.cls)),
         typefeatures = "\n  , ".join(featurestrs(features.type)),
-        extraimports = "\n".join(map(mkImportString, features.extra)),
-        methods = "\n  , ".join(methods)
+        extraimports = "\n".join(map(mkImportString, filterImports(features.extra, classInfo))),
+        methods = "\n  , ".join(methods),
+        pymqtversion = App.getVersion()
         )
+
+def filterImports(imports, classinfo):
+  return [x for x in imports if x.path[-1] != classinfo.className]
 
 def mkImportString(import_struct): #TODOX
   return ("import " + ".".join(import_struct.path) + " (%s)") % (", ".join(import_struct.imports))
@@ -404,9 +417,9 @@ class ClassInfo:
     self.hsClassModule, self.className = ClassModuleRules.lookup(path);
     self.hsClassName = "c_%s" % self.className
     self.makeQtModule_path = [ self.hsClassModule, self.className ]
-    self.superclasses = classElem.attrib["baseClasses"].split(", ")
-    self.hsSuperclasses = ["c_" + x for x in self.superclasses]
-    self.superclassFeatures = mergeFeatures([ FeatureSet(spec=set(), cls=set(), type=set(), extra={ModLUT.mkLookupImport(x)}) for x in self.hsSuperclasses ])
+    self.superclasses = classElem.attrib["baseClasses"].split(", ") 
+    self.hsSuperclasses = ["c_" + x for x in self.superclasses] if self.superclasses != [''] else []
+    self.superclassFeatures = mergeFeatures([ FeatureSet(spec=set(), cls=set(), type=set(), extra={ModLUT.mkLookupImport(x)}) for x in self.hsSuperclasses ]) 
 
 class Correlate:
   def _filterMethodsByNameOrSig(signatures, ignore): #TODO
@@ -435,7 +448,7 @@ class Correlate:
             )
           ]
       except BadSig as e:
-        failed += [ (x, e) ]
+        failed += [ (ET.tostring(x), e) ]
     return methods, failed
 
   #TODO ignores ignore
@@ -540,6 +553,8 @@ class ClassModuleRules:
       return ("Gui", _name)
     elif _module == "QtWidgets":
       return ("Widgets", _name)
+    elif _module == "QtCore":
+      return ("Core", _name)
     else:
       raise NotImplementedError()
     #return ClassModuleRules.lut[_module][_name] #TODO
@@ -555,7 +570,7 @@ class FilterRules:
 #TODO HAXXX
 class ModLUT1:
   basepath = ("Graphics", "UI", "Qtah", "Generator", "Interface")
-  modlist = [x.strip().replace("./","").split("/") for x in open("%s/modlist.txt" % mypath, "r").readlines()]
+  modlist = [x.strip().replace("./","").split("/") for x in open("%s/runtime/modlist.txt" % App.mypath, "r").readlines()]
 class ModLUT2:
   def gen(x,y):
     return Import(path=ModLUT1.basepath + (x.lstrip("Qt"), y), imports=("c_%s" % y, ))

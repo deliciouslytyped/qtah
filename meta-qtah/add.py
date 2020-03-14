@@ -1,6 +1,8 @@
 #! /usr/bin/env nix-shell
 #! nix-shell -p python37 -i python3
 
+#TODO write stderr (i.e. failures) to generated.fail file or something
+
 #TODO this is really bad
 #I wanted to use diff patches with context originally but it didnt work how I wanted
 import sys
@@ -88,12 +90,15 @@ def callGen():
     out, err = hdl.communicate()
     if hdl.returncode != 0:
       raise subprocess.CalledProcessError(hdl.returncode, cmd, err)
+    print("subprocess stderror:\n" + textwrap.indent(err.decode("ascii"), "    "), file=sys.stderr)
   except subprocess.CalledProcessError as e:
     print("subprocess error:\n" + textwrap.indent(e.output.decode("ascii"), "    "), file=sys.stderr)
     raise e
 
   with open(target, "x") as f:
       f.write(out.decode("utf-8"))
+  with open(target + ".fail", "w") as f: #opened as w because if it exists we should fail on the other open, otherwise we should overwrite with new data
+    print("subprocess stderror:\n" + textwrap.indent(err.decode("ascii"), "    "), file=f)
 
 
 callGen() #TODO fail if fail

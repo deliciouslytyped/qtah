@@ -1,7 +1,7 @@
 let
   # Look here for information about how to generate `nixpkgs-version.json`.
   #  → https://nixos.wiki/wiki/FAQ/Pinning_Nixpkgs
-  pinnedVersion = builtins.fromJSON (builtins.readFile ./.nixpkgs-version.json);
+  pinnedVersion = builtins.fromJSON (builtins.readFile ./nixpkgs-version.json);
   pinnedPkgs = import (builtins.fetchGit {
     inherit (pinnedVersion) url rev;
 
@@ -18,8 +18,13 @@ let
   sources = {
     _5_12_3 = {
       url = "http://code.qt.io/pyside/pyside-setup.git";
-      rev = "fef1bfb9069afb64761cdac7bc219b3a510fec19"; #needed for patch to work
+      rev = "fef1bfb9069afb64761cdac7bc219b3a510fec19"; #needed for old patch to work
       sha256 = "sha256:18p6hyvdgys45jhijlmgjpp48rkikr36hpsrly9rcr0vais3h5zz";
+      };
+    _5_12_6 = {
+      url = "http://code.qt.io/pyside/pyside-setup.git";
+      rev = "91accc79d8a9bfb7f7016871aa9cc62fd2dc406e"; #new patch
+      sha256 = "sha256:0mbayrnf50ha3fp081ijnmilclhzmgy6h16vaj9as1fdrqi1v7c9";
       };
     };
       #rev = "da93f708354168975e8f906080b64a323d439117"; #dev
@@ -31,15 +36,16 @@ in
   pkgs.stdenv.mkDerivation {
     name = "apiExtractor";
 
-    src = fetchgit sources._5_12_3;
+    src = fetchgit sources._5_12_6;
 
     nativeBuildInputs = [ cmake ];
     buildInputs = [ qt512.qtbase qt512.qtxmlpatterns llvmPackages.libclang python37 makeWrapper ];
 
     patches = [
-      ./dumper.patch 
+      ./dumper-backport.patch 
       ./more-dump.patch
-      <nixpkgs/pkgs/development/python-modules/shiboken2/nix_compile_cflags.patch> # needs 5.12.3
+      ./nix_compile_cflags.patch
+      #<nixpkgs/pkgs/development/python-modules/shiboken2/nix_compile_cflags.patch> # needs 5.12.3
       ];
 
     postPatch = ''
