@@ -1,24 +1,9 @@
-let
-  # Look here for information about how to generate `nixpkgs-version.json`.
-  #  → https://nixos.wiki/wiki/FAQ/Pinning_Nixpkgs
-  pinnedVersion = builtins.fromJSON (builtins.readFile ./upstream/nixpkgs-version.json);
-  pinnedPkgs = import (builtins.fetchGit {
-    inherit (pinnedVersion) url rev;
-
-    ref = "nixos-unstable";
-  }) {};
-in
-
-# This allows overriding pkgs by passing `--arg pkgs ...`
-{ pkgs ? pinnedPkgs }:
-
-
-pkgs.callPackage ({fetchgit, cmake, qt512, llvmPackages, python37, makeWrapper}:
+{stdenv, fetchgit, cmake, qt512, llvmPackages, python37, makeWrapper}:
   #see https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/python-modules/shiboken2/default.nix
-  pkgs.stdenv.mkDerivation {
+  stdenv.mkDerivation {
     name = "apiExtractor";
 
-    srcs = [ ./shiboken2-dev ];
+    src = ./shiboken2-dev;
 
     nativeBuildInputs = [ cmake ];
     buildInputs = [ qt512.qtbase qt512.qtxmlpatterns llvmPackages.libclang python37 makeWrapper ];
@@ -41,5 +26,4 @@ pkgs.callPackage ({fetchgit, cmake, qt512, llvmPackages, python37, makeWrapper}:
       "-DCMAKE_CXX_FLAGS=-I${llvmPackages.libclang.out}/include"
       ];
 
-    }) {}
-
+    }

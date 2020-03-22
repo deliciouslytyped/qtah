@@ -1,0 +1,13 @@
+licensing stuff wrt pulling in shiboken subcomponents into repo?
+
+shiboken:
+  make dumpcodemodel output better
+    *1 less guessing at stuff in the analysis stage / less analysis stage / more capabilities 
+
+
+transitive.py:
+  gen.py but gen the whole dep graph
+    improve filtering, inference (obsoleted by *1 ?)
+
+some kind of spec format, if necessary, for specifying spec rules, filters/exceptions, ...?
+

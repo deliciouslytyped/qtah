@@ -4,6 +4,7 @@
 ### 2. Extract APIExtractor and dumpcodemodel into branch
 ### 3. add subtree into meta-qtah directory
 
+echo WARNING:mangles author config
 if [ "$#" -ne 2 ]; then
   echo "USAGE: script upstream_branch target_path_from_repo_root"
   exit
@@ -22,7 +23,7 @@ temp=$(mktemp -d)
 git worktree add "$temp"
 pushd "$temp"
 
-#TODO are these operations possible without checkin out a worktree?
+#TODO are these operations possible without checking out a worktree?
 
 #1.
 url="http://code.qt.io/pyside/pyside-setup.git"
@@ -48,8 +49,6 @@ git subtree add --prefix=dumpcodemodel "$dump"
 git subtree add --prefix=ApiExtractor "$apiex"
 #add cannibalized CMakeLists
 #add eclipse project
-#add changelog?
-#test/add upstreaming info (split)
 
 popd
 git worktree remove "$temp"
