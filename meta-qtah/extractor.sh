@@ -1,6 +1,6 @@
 #! /usr/bin/env nix-shell
 #! nix-shell -I nixkgs=channel:nixos-unstable -i bash -p clang -v
-
+set -x
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 #export CLANG_INSTALL_DIR=/nix/store/d3gsn478zaxc7h4mlaadrig6cx36sk6i-clang-7.1.0

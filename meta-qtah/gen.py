@@ -22,6 +22,9 @@ import textwrap
 
 import os
 
+#TODO switch to using this
+ReaderStruct = namedtuple("ReaderStruct", ["features", "failures", "result"])
+
 ##method types
 Constructor = namedtuple("Constructor", ["signature", "ret", "is_const"])
 Destructor = namedtuple("Constructor", ["signature", "ret", "is_const"])
@@ -81,13 +84,44 @@ class BadSig(Exception):
 class App:
   mypath = os.path.dirname(os.path.abspath(__file__))
 
+  #so can be simply called as a lib
+  #todo; might want to control stdin/out better, idk?
+  def main(args=None, ostream=sys.stdout, estream=sys.stderr):
+    classInclude, className = App.parseArgs(args)
+    tree = App.getXML(classInclude)
+    classElem = App.getClassElem(tree, className)
+    #TODO: logging
+    #App.dumpClassXML(classElem)
+    #Rules(className).
+    #print(result)
+    rstruct = App.callGen(classElem, classInclude)
+    _, failures, res = rstruct
+    import pprint
+    pprint.pprint(failures, stream=estream) #TODO
+    print(res, file=ostream)
+    return rstruct
+
+  #todo consider tagging methods with features?
+  def callGen(classElem, classInclude):
+    failures = []
+    clinf = ClassInfo(classInclude, classElem)
+    __features = clinf.superclassFeatures
+    features, _failures, methods = Correlate.correlate(classElem, ignores=FilterRules.ignoreFns)
+    failures += _failures
+    _features, _failures, methods = Convert.hoppyMethodsToStrings(methods)
+    failures += _failures
+    features = mergeFeatures([features, _features, __features])
+    return ReaderStruct(features=features, failures=failures, result=Rules.genModule(clinf, features, methods))
+
   def getVersion(): #TODO make less hacky #TODO add date
     version = "unversioned"
     selfsha = subprocess.check_output(["sha256sum", App.mypath + "/gen.py"]).split()[0].decode("ascii")
     return "%s.%s" % (version, selfsha)
 
-  def parseArgs():
-    classInclude = sys.argv[1]
+  def parseArgs(argv=None):
+    if not argv:
+      argv = sys.argv
+    classInclude = argv[1]
     className = classInclude.split("/")[1] #TODO system dependent path separator
     return classInclude, className
 
@@ -104,7 +138,7 @@ class App:
     tree = ET.fromstring(xml)
     return tree
 
-  def getClassElem(tree):
+  def getClassElem(tree, className):
     results = tree.findall('./object-type[@name="%s"]' % className)
     results += tree.findall('./value-type[@name="%s"]' % className) #TODO i have no idea why i need both
     try:
@@ -151,7 +185,7 @@ class Convert:
   #TODO handle overloads
   def _mkMethod(func, method_struct):
     fname = method_struct.signature.name
-    features, _args, failed = Convert.argsToHoppy(method_struct.signature.args, debuginfo=method_struct) #TODO handle fail
+    features, failed, _args = Convert.argsToHoppy(method_struct.signature.args, debuginfo=method_struct) #TODO handle fail
     args = "[ %s ]" % ", ".join(_args)
 
     try:
@@ -161,15 +195,16 @@ class Convert:
       failed += [ (func, method_struct, e) ]
 
     if failed:
-      return [], [], failed
+      return ReaderStruct(features=[], failures=failed, result=[])
 
     #TODO meh
     result = '%s "%s" %s %s' % (func, fname, args if args != "[  ]" else "np", ret)
     if args != "[  ]":
       features += [ FeatureSet(spec={SpecFeature.np}, cls=set(), type=set(), extra=set()) ]
 
-    return features, [result], failed
+    return ReaderStruct(features=features, failures=failed, result=[result])
 
+  #NOTE: the features for the mk calls are already handled in ___ #TODO check correctness #TODO should i just add them here anyway
   def methodToHoppy(variant, method_struct):
     #TODO: case over Normal(is.. / ??), Constructor
 
@@ -178,7 +213,7 @@ class Convert:
     if variant == "constructor":
       suffix = "N".join(method_struct.signature.args)
       fname = "new" + (("With" + suffix) if suffix else "") #TODO probably parse argument names from qt for this
-      features, _args, failed = Convert.argsToHoppy(method_struct.signature.args, isCtor=True, debuginfo=method_struct) #TODO handle fail #TODO pass extra info for debug output
+      features, failed, _args = Convert.argsToHoppy(method_struct.signature.args, isCtor=True, debuginfo=method_struct) #TODO handle fail #TODO pass extra info for debug output
       args = "[ %s ]" % ", ".join(_args)
 
       #TODO meh
@@ -186,12 +221,12 @@ class Convert:
       if args != "[  ]":
         features += [ FeatureSet(spec={SpecFeature.np}, cls=set(), type=set(), extra=set()) ]
 
-      return features, [result], failed
+      return ReaderStruct(features=features, failures=failed, result=[result])
 
     elif variant == "boolisprop":
       fname = method_struct.signature.name.lstrip("is")
       fname = re.sub("[A-Z]", lambda x: x.group().lower(), fname, count=1) #decapitalize first capital, for camelcasing (wait is this even necessary?) TODO
-      return [], ['mkBoolIsProp "%s"' % fname], []
+      return ReaderStruct(features=[], failures=[], result=['mkBoolIsProp "%s"' % fname])
 
     elif variant == "constmethod":
       return Convert._mkMethod("mkConstMethod", method_struct)
@@ -250,71 +285,45 @@ class Convert:
       except BadSig as e:
         failed += [ (debuginfo, x, e) ]
         continue
-    return features, result, failed
+    return ReaderStruct(features=features, failures=failed, result=result)
+
+  def _mk(methods, type):
+    features, result, failed = list(), list(), list()
+    for x in methods:
+      _features, _fail, _res = Convert.methodToHoppy(type, x)
+      result += _res
+      failed += _fail
+      features += _features
+    return ReaderStruct(features=features, failures=failed, result=result)
 
   def mkCtors(methods):
-    features, result, failed = list(), list(), list()
-    for x in methods:
-      _features, _res, _fail = Convert.methodToHoppy("constructor", x)
-      result += _res
-      failed += _fail
-      features += _features
-    return features, result, failed
+    return Convert._mk(methods, "constructor")
 
   def mkBoolIsProps(methods):
-    features, result, failed = list(), list(), list()
-    for x in methods:
-      _features, _res, _fail = Convert.methodToHoppy("boolisprop", x)
-      result += _res
-      failed += _fail
-      features += _features
-    return features, result, failed
+    return Convert._mk(methods, "boolisprop")
 
   def mkPlainMethods(methods):
-    features, result, failed = list(), list(), list()
-    for x in methods:
-      _features, _res, _fail = Convert.methodToHoppy("plainmethod", x)
-      result += _res
-      failed += _fail
-      features += _features
-    return features, result, failed
+    return Convert._mk(methods, "plainmethod")
 
   def mkConstMethods(methods):
-    features, result, failed = list(), list(), list()
-    for x in methods:
-      _features, _res, _fail = Convert.methodToHoppy("constmethod", x)
-      result += _res
-      failed += _fail
-      features += _features
-    #import pprint
-    #pprint.pprint(features, stream=sys.stderr)
-    return features, result, failed
+    return Convert._mk(methods, "constmethod")
 
   #the features for method types are returned by correlate, this chain only returns features for the signature types
   def hoppyMethodsToStrings(struct):
     features, result, failed = list(), list(), list()
+    types = [
+      Convert.mkBoolIsProps(struct.BoolIsProp),
+      Convert.mkCtors(struct.Ctor),
+      Convert.mkPlainMethods(struct.PlainMethod),
+      Convert.mkConstMethods(struct.ConstMethod)
+      ]
+    for x in types:
+      _features, _failed, _result = x
+      result += _result
+      features += _features
+      failed += _failed
 
-    _features, _result, _failed = Convert.mkBoolIsProps(struct.BoolIsProp)
-    result += _result
-    features += _features
-    failed += _failed
-
-    _features, _result, _failed = Convert.mkCtors(struct.Ctor)
-    result += _result
-    features += _features
-    failed += _failed
-
-    _features, _result, _failed = Convert.mkPlainMethods(struct.PlainMethod)
-    result += _result
-    features += _features
-    failed += _failed
-
-    _features, _result, _failed = Convert.mkConstMethods(struct.ConstMethod)
-    result += _result
-    features += _features
-    failed += _failed
-
-    return mergeFeatures(features), result, failed
+    return ReaderStruct(features=mergeFeatures(features), failures=failed, result=result)
 
 class Rules:
   typelut = {
@@ -543,7 +552,7 @@ class Correlate:
     res_mkMethod, _, _features = Correlate.filter_mkMethod(list(set.intersection(*map(set, remaining))))
     features += _features
 
-    return mergeFeatures(features), HoppyMethods(Ctor=res_mkCtor, BoolIsProp=res_mkBoolIsProp, PlainMethod=res_mkMethod, ConstMethod=res_mkConstMethod), failed
+    return ReaderStruct(features=mergeFeatures(features), failures=failed, result=HoppyMethods(Ctor=res_mkCtor, BoolIsProp=res_mkBoolIsProp, PlainMethod=res_mkMethod, ConstMethod=res_mkConstMethod))
 
 
 class ClassModuleRules:
@@ -581,28 +590,5 @@ class ModLUT:
   def mkLookupImport(clstr):
     return ModLUT.modlut[clstr]
 
-#todo consider tagging methods with features?
-def callGen(classElem):
-  failures = []
-  clinf = ClassInfo(classInclude, classElem)
-  __features = clinf.superclassFeatures
-  features, methods, _failures = Correlate.correlate(classElem, ignores=FilterRules.ignoreFns)
-  failures += _failures
-  _features, methods, _failures = Convert.hoppyMethodsToStrings(methods)
-  failures += _failures
-  features = mergeFeatures([features, _features, __features])
-  import pprint
-  pprint.pprint(failures, stream=sys.stderr) #TODO
-  return Rules.genModule(clinf, features, methods)
-
-
-
 if __name__ == "__main__":
-  classInclude, className = App.parseArgs()
-  tree = App.getXML(classInclude)
-  classElem = App.getClassElem(tree)
-  #TODO: logging
-  #App.dumpClassXML(classElem)
-  #Rules(className).
-  #print(result)
-  print(callGen(classElem))
+  App.main()
