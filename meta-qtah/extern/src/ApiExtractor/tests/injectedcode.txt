@@ -1,5 +1,0 @@
-// Bla
-// @snippet label
-code line
-// @snippet label
-// Bla
