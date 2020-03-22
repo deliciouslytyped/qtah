@@ -87,6 +87,30 @@ static void formatXmlScopeMembers(QXmlStreamWriter &writer, const ScopeModelItem
     }
     for (const auto &en : nsp->enums())
         formatXmlEnum(writer, en);
+
+    for (auto func : nsp->functions()){
+       const QString signature = func->typeSystemSignature();
+       const QString rettype = func->type().toString(); //wtf
+       const QString isConst = func->isConstant() ? QStringLiteral("true") : QStringLiteral("false");
+       QString ttype;
+       switch(func->functionType()) {
+         case CodeModel::FunctionType::Constructor: ttype = QStringLiteral("Constructor"); break;
+         case CodeModel::FunctionType::CopyConstructor: ttype = QStringLiteral("CopyConstructor"); break;
+         case CodeModel::FunctionType::Destructor: ttype = QStringLiteral("Destructor"); break;
+         case CodeModel::FunctionType::MoveConstructor: ttype = QStringLiteral("MoveConstructor"); break;
+         case CodeModel::FunctionType::Normal: ttype = QStringLiteral("Normal"); break;
+         case CodeModel::FunctionType::Signal: ttype = QStringLiteral("Signal"); break;
+         case CodeModel::FunctionType::Slot: ttype = QStringLiteral("Slot"); break;
+         };
+               if (!signature.contains(QLatin1String("operator"))) { // Skip free operators
+                   writer.writeStartElement(QStringLiteral("function"));
+                   writer.writeAttribute(QStringLiteral("signature"), signature);
+                   writer.writeAttribute(QStringLiteral("return"), rettype);
+                   writer.writeAttribute(QStringLiteral("isConst"), isConst);
+                   writer.writeAttribute(QStringLiteral("ttype"), ttype);
+                   writer.writeEndElement();
+               }
+    }
 }
 
 static bool isPublicCopyConstructor(const FunctionModelItem &f)
@@ -104,6 +128,11 @@ static void formatXmlClass(QXmlStreamWriter &writer, const ClassModelItem &klass
     writer.writeStartElement(isValueType ? QStringLiteral("value-type")
                                          : QStringLiteral("object-type"));
     writer.writeAttribute(nameAttribute(), klass->name());
+    QStringList baseClasses;
+    for(const auto &k : klass->baseClasses()) {
+       baseClasses.append(k.name);
+       };
+    writer.writeAttribute(QStringLiteral("baseClasses"), baseClasses.join(QStringLiteral(", ")));
     formatXmlScopeMembers(writer, klass);
     writer.writeEndElement();
 }
