@@ -18,7 +18,7 @@ pkgs.callPackage ({fetchgit, cmake, qt512, llvmPackages, python37, makeWrapper}:
   pkgs.stdenv.mkDerivation {
     name = "apiExtractor";
 
-    srcs = [ ./src ];
+    srcs = [ ./shiboken2-dev ];
 
     nativeBuildInputs = [ cmake ];
     buildInputs = [ qt512.qtbase qt512.qtxmlpatterns llvmPackages.libclang python37 makeWrapper ];
