@@ -5,7 +5,8 @@
 ### 3. add subtree into meta-qtah directory
 
 if [ "$#" -ne 2 ]; then
-  echo "USAGE: script upstream_branch relative_target_dir"
+  echo "USAGE: script upstream_branch target_path_from_repo_root"
+  exit
 fi
 
 set -euo pipefail
@@ -57,5 +58,5 @@ git branch -D "$branch"
 
 #3.
 pushd $(git rev-parse --show-toplevel) #needs to be done from the root for some reason
-git subtree add -P "$DIR"/"$target" "$newrev"
+git subtree add -P "$target" "$newrev"
 popd
