@@ -49,7 +49,7 @@ uint qHash(const Include& inc)
 QTextStream& operator<<(QTextStream& out, const Include& include)
 {
     if (include.isValid())
-        out << include.toString() << Qt::endl;
+        out << include.toString() << endl;
     return out;
 }
 

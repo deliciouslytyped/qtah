@@ -2885,7 +2885,7 @@ static void writeRejectLogFile(const QString &name,
 
 
     for (int reason = 0; reason < AbstractMetaBuilder::NoReason; ++reason) {
-        s << QString(72, QLatin1Char('*')) << Qt::endl;
+        s << QString(72, QLatin1Char('*')) << endl;
         switch (reason) {
         case AbstractMetaBuilder::NotInTypeSystem:
             s << "Not in type system";
@@ -2918,16 +2918,16 @@ static void writeRejectLogFile(const QString &name,
             break;
         }
 
-        s << Qt::endl;
+        s << endl;
 
         for (QMap<QString, AbstractMetaBuilder::RejectReason>::const_iterator it = rejects.constBegin();
              it != rejects.constEnd(); ++it) {
             if (it.value() != reason)
                 continue;
-            s << " - " << it.key() << Qt::endl;
+            s << " - " << it.key() << endl;
         }
 
-        s << QString(72, QLatin1Char('*')) << Qt::endl << Qt::endl;
+        s << QString(72, QLatin1Char('*')) << endl << endl;
     }
 
 }
