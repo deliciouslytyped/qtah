@@ -11,6 +11,15 @@ in
 
 # This allows overriding pkgs by passing `--arg pkgs ...`
 { pkgs ? pinnedPkgs }: {
+  #TODO also generate local includes directory and stuff so eclipse tab completion works
+  eclipse = pkgs.mkShell { #TODO this should proably be tacked ont apidumper
+    name = "apiex-devver";
+    CLANG_INSTALL_DIR = pkgs.llvmPackages.libclang.out;
+    buildInputs = [ pkgs.git pkgs.nix pkgs.eclipses.eclipse-cpp pkgs.clang pkgs.cmake pkgs.qt5.qtbase pkgs.qt5.qtxmlpatterns pkgs.llvmPackages.libclang ]; #TODO just add buildinputs?
+    shellHook = "${builtins.unsafeDiscardStringContext (builtins.toString ./.)}/add-headers.sh";
+    };
+  #TODO just use buildInputs from apidumper?
+  headers = pkgs.symlinkJoin { name = "headers"; paths = with pkgs.qt5; [ qtbase.dev qtxmlpatterns.dev pkgs.llvmPackages.libclang.out ]; };
   apidumper-local = pkgs.callPackage ./apidumper-local.nix {};
   apidumper-upstream = #TODO test because i just refactored
     let
@@ -40,6 +49,7 @@ in
           #<nixpkgs/pkgs/development/python-modules/shiboken2/nix_compile_cflags.patch> # needs 5.12.3
           ];
 
+        #todo, easy fix: cp: cannot stat 'tests/dumpcodemodel/dumpcodemodel': No such file or directory
         installPhase = builtins.replaceStrings [ "dumpcodemodel/dumpcodemodel" ] [ "tests/dumpcodemodel/dumpcodemodel" ] old.installPhase;
 
         cmakeFlags = old.cmakeFlags ++ [

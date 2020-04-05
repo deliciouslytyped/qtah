@@ -57,5 +57,5 @@ git branch -D "$branch"
 
 #3.
 pushd $(git rev-parse --show-toplevel) #needs to be done from the root for some reason
-git subtree add -P "$target" "$newrev"
+git subtree add -P "$target" "$newrev" #TODO merge if already exists? / how to update?
 popd
