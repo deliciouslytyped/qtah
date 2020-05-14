@@ -1,0 +1,41 @@
+diff -Naur result/pyclasvi.py result2/pyclasvi.py
+--- result/pyclasvi.py	1970-01-01 01:00:01.000000000 +0100
++++ result2/pyclasvi.py	2020-04-15 23:21:00.416846831 +0200
+@@ -1727,7 +1727,7 @@
+ 
+ # Main window combine all frames in tabs an contains glue logic between these frames
+ class Application(ttk.Frame):
+-    def __init__(self, master=None, file=None):
++    def __init__(self, master=None, file=None, default_args=None):
+         ttk.Frame.__init__(self, master)
+         self._set_style()
+         self.grid(sticky='nswe')
+@@ -1739,6 +1739,10 @@
+             self.inputFrame.load_filename(file)
+         else:
+             self.inputFrame.set_filename('select file to parse =>')
++
++        if default_args: #use -- in cli to indicate all remaining args should go in the pass-through
++            self.inputFrame.set_args(default_args)
++        else:
+             self.inputFrame.set_args(['-xc++',
+                                       '-std=c++14',
+                                       '-I/your/include/path',
+@@ -1798,12 +1802,16 @@
+                         1st line = file to parse,
+                         next lines = Clang arguments, one argument per line''',
+                         nargs='?')
++    #https://stackoverflow.com/questions/22850332/getting-the-remaining-arguments-in-argparse
++    parser.add_argument('rest', nargs=argparse.REMAINDER)
++
+     args = parser.parse_args()
+ 
+     if args.libFile:
+         clang.cindex.Config.set_library_file(args.libFile[0])
+ 
+-    app = Application(file=args.file)
++    print("REST: %s" % args.rest)
++    app = Application(file=args.file, default_args=args.rest)
+     app.master.title('PyClASVi')
+     app.mainloop()
+ 

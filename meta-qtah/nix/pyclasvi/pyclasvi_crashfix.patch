@@ -1,0 +1,14 @@
+diff --git a/pyclasvi.py b/pyclasvi.py
+index f46ae1f..cb8d4a6 100755
+--- a/pyclasvi.py
++++ b/pyclasvi.py
+@@ -965,6 +965,9 @@ class CursorOutputFrame(ttk.Frame):
+ 
+         if not isIterData:
+             try:
++                print(attrName)
++                if attrName in [ "tls_kind" ]:
++                    return False
+                 attrData = getattr(obj, attrName)
+                 attrType = attrData.__class__.__name__
+                 if attrType in CursorOutputFrame._IGNORE_TYPES:
